@@ -1,0 +1,130 @@
+name: Build data and deploy map
+
+# Downloads all inputs from the official sources, rebuilds docs/data
+# (street pieces with canopy, trees, crowns, summer surface heat, 3D buildings) and publishes docs/ to GitHub Pages.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install tools
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q tippecanoe
+          pip install -r requirements.txt
+          mkdir -p logs input docs/data
+
+      # ---------------------------------------------------------------- trees + streets (required)
+      - name: Download Baumkataster, Straßennetz, Ortsteile (WFS Stadt Leipzig)
+        run: |
+          python pipeline/fetch_inputs.py leipzig 2>&1 | tee logs/01_fetch_leipzig.log
+          test ${PIPESTATUS[0]} -eq 0
+
+      # ---------------------------------------------------------------- heat (optional)
+      - name: Summer land-surface temperature (Landsat 8/9, Planetary Computer)
+        id: heat
+        continue-on-error: true
+        timeout-minutes: 40
+        run: |
+          python pipeline/build_heat.py --years 2022-2025 2>&1 | tee logs/02_heat.log
+          test ${PIPESTATUS[0]} -eq 0
+
+      # ---------------------------------------------------------------- street analysis
+      - name: Street pieces, canopy, data gaps, heat per street
+        run: |
+          python pipeline/build_streets.py 2>&1 | tee logs/03_streets.log
+          test ${PIPESTATUS[0]} -eq 0
+
+      # ---------------------------------------------------------------- 3D buildings (optional)
+      - name: Cache LoD2 tiles
+        uses: actions/cache@v4
+        with:
+          path: input/lod2
+          key: leipzig-lod2-v1
+
+      - name: Download LoD2 building models (GeoSN)
+        id: lod2
+        continue-on-error: true
+        run: |
+          python pipeline/fetch_inputs.py lod2 2>&1 | tee logs/04_fetch_lod2.log
+          test ${PIPESTATUS[0]} -eq 0
+
+      - name: LoD2 footprints + measured height
+        if: steps.lod2.outcome == 'success'
+        continue-on-error: true
+        run: |
+          python pipeline/lod2_to_footprints.py --lod2 input/lod2 --out input/leipzig_lod2.parquet 2>&1 | tee logs/05_lod2.log
+          test ${PIPESTATUS[0]} -eq 0
+
+      - name: Vector tiles (trees, crowns, buildings)
+        run: |
+          python pipeline/build_tiles.py 2>&1 | grep -v "%  " | tee logs/06_tiles.log
+          test ${PIPESTATUS[0]} -eq 0
+
+      - name: Summary
+        if: always()
+        run: |
+          ls -lh docs/data | tee logs/07_files.log
+          python -c "import json;s=json.load(open('docs/data/stats.json'));print(json.dumps(s,ensure_ascii=False,indent=1))" > logs/08_stats.log || true
+          { echo '```json'; cat logs/08_stats.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Report (annotations readable via the API)
+        if: always()
+        run: |
+          python - <<'PY'
+          import glob, os
+          def note(title, text):
+              text = text[-3500:].replace("%", "%25").replace("\r", "").replace("\n", "%0A")
+              print(f"::notice title={title}::{text}")
+          for f in sorted(glob.glob("logs/*.log")):
+              lines = [l for l in open(f, errors="replace").read().splitlines() if l.strip()]
+              note(os.path.basename(f), "\n".join(lines[-30:]))
+          PY
+
+      - name: Upload build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: |
+            logs/
+            docs/data/stats.json
+            docs/data/heat.json
+          if-no-files-found: ignore
+
+      # ---------------------------------------------------------------- publish
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

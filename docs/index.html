@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trees Are Not Enough · Leipzig</title>
+<meta name="description" content="Which Leipzig streets lack effective tree canopy, even where trees are planted, and where does low canopy meet summer heat? Every 100 m of street, mapped as a line.">
+<meta property="og:title" content="Trees Are Not Enough · Leipzig">
+<meta property="og:description" content="187,000 registered trees, 1,800 km of streets, cut into 100 m pieces: estimated crown cover, tree age mix, data gaps and summer surface heat.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+<link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+<link href="style.css" rel="stylesheet">
+</head>
+<body>
+<div class="app">
+  <main class="mapwrap">
+    <div id="map" aria-label="Map of Leipzig streets"></div>
+    <div class="card legend-card" id="legend" aria-live="polite"></div>
+
+    <div class="card mapbar" id="mapbar">
+      <div class="seg seg2 mini" id="baseSeg" role="tablist" aria-label="Base map">
+        <button data-base="map" class="on">Map</button>
+        <button data-base="sat">Aerial photo</button>
+      </div>
+      <div class="seg mini3" id="viewSeg" role="tablist" aria-label="View">
+        <button data-view="lines" class="on">━ Lines</button>
+        <button data-view="trees">● Trees</button>
+        <button data-view="3d">⬢ 3D</button>
+      </div>
+      <button class="pill" id="heatBtn" aria-pressed="false" title="Summer surface temperature (Landsat)">🌡 Heat layer</button>
+      <label class="op"><span>Lines</span><input type="range" id="opac" min="20" max="100" value="95" aria-label="Line opacity"></label>
+    </div>
+
+    <div id="tip" class="tip" hidden></div>
+    <div id="loading" class="loading">Loading 24,000 street pieces…</div>
+
+    <div class="intro card" id="intro" hidden>
+      <p class="eyebrow">Welcome</p>
+      <h2>Trees are not enough</h2>
+      <ol class="steps">
+        <li><b>Every line is ≤ 100 m of street.</b> Its colour is the estimated share of the street (15 m to each side) covered by tree crowns.</li>
+        <li><b>Hover or click a line</b> for its trees: how many, how young, how big their crowns are, and what is missing in the records.</li>
+        <li><b>Switch on the heat layer</b> to see where little shade meets the hottest summer surfaces, and use <b>3D</b> to see crowns and buildings.</li>
+      </ol>
+      <button class="primary" id="introGo">Start exploring</button>
+    </div>
+  </main>
+
+  <aside class="panel card" id="panel">
+    <header class="head">
+      <p class="eyebrow">#30DayMapChallenge · Day 2 · Lines · Leipzig</p>
+      <h1>Trees are not enough</h1>
+      <p class="lede" id="lede">Leipzig registers <b>187,690 trees</b>. But ten young trees do not shade a street like four old ones. We cut every street into pieces of at most 100&nbsp;m and estimated how much of it lies under a tree crown.</p>
+    </header>
+
+    <section class="block">
+      <h2 class="label">1 · Find a street</h2>
+      <div class="search one">
+        <input id="qStreet" list="streetList" placeholder="Street, e.g. Karl-Heine-Straße" autocomplete="off" aria-label="Street">
+        <datalist id="streetList"></datalist>
+        <button id="qGo">Show street</button>
+      </div>
+      <p class="msg" id="qMsg"></p>
+    </section>
+
+    <section class="block" id="detail" hidden></section>
+
+    <section class="block">
+      <h2 class="label">2 · Colour the streets by</h2>
+      <div class="seg seg4" id="modeSeg" role="tablist">
+        <button data-mode="canopy" class="on">Canopy</button>
+        <button data-mode="trees">Trees</button>
+        <button data-mode="heat">Heat</button>
+        <button data-mode="prio">Priority</button>
+      </div>
+      <p class="hint" id="modeHint"></p>
+      <label class="switch"><input type="checkbox" id="gapTog" checked><span class="knob"></span><span>Mark data gaps <small>dashed purple</small></span></label>
+      <label class="switch"><input type="checkbox" id="noTreeTog" checked><span class="knob"></span><span>Show streets without registered trees <small>thin grey</small></span></label>
+    </section>
+
+    <section class="block">
+      <h2 class="label">3 · Count is not cover</h2>
+      <p class="hint">Two streets, two stories: many young, small-crowned trees can shade <b>less</b> than a few large ones. Click a pair to compare on the map.</p>
+      <div id="story"></div>
+    </section>
+
+    <section class="block">
+      <h2 class="label">4 · Where low canopy meets heat</h2>
+      <p class="big" id="bigNum"></p>
+      <p class="hint" id="bigHint"></p>
+      <div class="matrix m4" id="matrix"></div>
+      <div class="dl" id="downloads"></div>
+    </section>
+
+    <section class="block">
+      <h2 class="label">Streets to look at</h2>
+      <div class="seg seg3t" id="rankSeg">
+        <button data-r="rank_trees_not_enough" class="on">Many trees, little shade</button>
+        <button data-r="rank_low_canopy_hot">Hot &amp; bare</button>
+        <button data-r="rank_best">Best shaded</button>
+      </div>
+      <ol id="rank" class="rank st"></ol>
+      <p class="hint">Streets of at least 400 m. Click to zoom.</p>
+    </section>
+
+    <section class="block">
+      <h2 class="label">Data gaps are not zero trees</h2>
+      <div id="gaps"></div>
+    </section>
+
+    <footer class="foot">
+      <p><b>Method.</b> The official street network (Straßennetz, Stadt Leipzig) is cut into equal pieces of at most 100 m. Around each piece a 30 m corridor (15 m to each side, flat ends) is drawn. A tree counts for a piece when its stem stands inside the corridor. Each tree's crown is a disc with the recorded crown diameter (kr_durchm); canopy cover = area of the union of all crown discs inside the corridor ÷ corridor area. Classes: very low &lt; 5 %, low 5–15 %, moderate 15–30 %, good ≥ 30 %.</p>
+      <p><b>Missing values are not dropped.</b> Trees without a usable crown diameter, height or planting year stay in the counts. A missing crown is estimated from trees of the same genus and height class (or genus, or city median); the map reports both the estimate and the measured-only lower bound, and marks a piece as a <b>data gap</b> when ≥ 25 % of its trees lack a crown diameter.</p>
+      <p id="heatMethod"><b>Heat.</b> Land-surface temperature from Landsat 8/9 (USGS Collection 2, band ST_B10), clear-sky summer scenes (June–August), cloud-masked, combined as the median of per-scene anomalies; sampled every 10 m along each street. It is the <b>temperature of surfaces</b> at about 10:30 local time, not air temperature or felt heat. Heat thirds are relative to all Leipzig streets.</p>
+      <p><b>Limits.</b> The Baumkataster lists trees managed by the city; trees on private ground, in courtyards or front gardens are missing, and the city notes that recording is not complete. "No registered trees" therefore does not always mean "no trees". Crowns are circles; real crowns overlap buildings and change with pruning and season.</p>
+      <p id="coverage"></p>
+      <p><b>Data &amp; licences.</b>
+        Baumkataster and Straßennetz, Ortsteile © Stadt Leipzig (<a href="https://opendata.leipzig.de/dataset/baumkataster-stadt-leipzig1">Open-Data-Portal Leipzig</a>, WFS geodienste.leipzig.de).
+        Landsat 8/9 Collection 2 Level-2 courtesy of the U.S. Geological Survey (public domain), accessed via Microsoft Planetary Computer.
+        3D buildings: 3D-Stadtmodell LoD2 © GeoSN, <a href="https://www.govdata.de/dl-de/by-2-0">dl-de/by-2-0</a>.
+        Aerial photo: DOP20 © GeoSN, <a href="https://www.govdata.de/dl-de/by-2-0">dl-de/by-2-0</a>.
+        Basemap © <a href="https://carto.com/attribution">CARTO</a>, © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors.</p>
+      <p>Barış Parlatangiller · <a href="https://github.com/barisparlatangiller" id="repoLink">source &amp; method</a> · built with AI assistance (Claude, Anthropic)</p>
+    </footer>
+  </aside>
+</div>
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="https://unpkg.com/pmtiles@3.2.1/dist/pmtiles.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
