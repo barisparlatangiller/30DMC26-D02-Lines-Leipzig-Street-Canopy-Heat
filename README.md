@@ -19,6 +19,14 @@ Leipzig's tree register lists about 188,000 trees. A count does not tell you how
 | **Data gaps** | trees without crown size, height or planting year are kept and counted; streets where ≥ 25 % of trees lack a crown size are marked (dashed purple) |
 | **3D** | tree crowns as floating cylinders (height and crown diameter from the register) plus LoD2 buildings |
 
+## Key findings
+
+- **1,788 km** of streets, cut into **24,332 pieces**. Averaged over all of them, crowns cover only **6.3 %** of the 30 m street corridor (6.2 % counting measured crowns only).
+- **48 %** of street length has **no registered tree** within 15 m. **17 %** has trees (≥ 6 per 100 m) but less than 15 % canopy: *trees, but not enough*. Only **15 %** has effective canopy (≥ 15 %).
+- **Count is not cover:** Shakespearestraße has 10.1 trees per 100 m but 1 % canopy, and 59 of its 60 trees were planted since 2011. Pfaffendorfer Straße has 5.8 trees per 100 m and 17 % canopy, with 35 of its 50 trees having crowns of 10 m or more.
+- **204 km** of street have little canopy (< 15 %) **and** fall in the hottest third of Leipzig streets (Landsat summer surface temperature, 16 clear scenes 2022–2025). Good canopy is concentrated on the cooler streets: 44 km in the coolest third against 16 km in the hottest.
+- **Data gaps:** 9,239 trees have no usable crown diameter, 12,090 no height and 59,302 no planting year. All of them stay in the analysis. 21.7 km of street are flagged because ≥ 25 % of their trees have no crown size.
+
 ## Method
 
 1. **Streets.** The official Leipzig street network (`Strassen_Segmente`, EPSG:25833) is merged per segment and cut into equal pieces of at most 100 m.
