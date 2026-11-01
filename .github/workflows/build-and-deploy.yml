@@ -79,7 +79,7 @@ jobs:
 
       - name: Vector tiles (trees, crowns, buildings)
         run: |
-          python pipeline/build_tiles.py 2>&1 | grep -v "%  " | tee logs/06_tiles.log
+          python pipeline/build_tiles.py 2>&1 | grep -v "%" | tee logs/06_tiles.log
           test ${PIPESTATUS[0]} -eq 0
 
       - name: Summary

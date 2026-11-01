@@ -266,3 +266,9 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .tip b { font-weight: 600; }
 .pill { font-size: 12.5px; }
 .ptab td:first-child { padding-right: 10px; white-space: nowrap; color: var(--ink-2); }
+@media (max-width: 860px) {
+  .legend-card { max-height: 32vh; }
+  .lg-row { margin: 2px 0; font-size: 12px; }
+  .lg-title { font-size: 12.5px; }
+  .rank.st li { grid-template-columns: 18px 1fr 40px 84px; }
+}

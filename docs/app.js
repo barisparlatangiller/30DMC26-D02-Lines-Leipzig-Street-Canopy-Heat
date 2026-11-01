@@ -75,25 +75,10 @@
     const protocol = new pmtiles.Protocol();
     maplibregl.addProtocol("pmtiles", protocol.tile);
     const dark = matchMedia("(prefers-color-scheme: dark)").matches;
-    const carto = dark ? "dark_all" : "light_all";
     map = new maplibregl.Map({
       container: "map", hash: true, maxPitch: 70, attributionControl: { compact: true },
       center: [12.375, 51.337], zoom: 12.3, minZoom: 9.5, maxZoom: 19,
-      style: {
-        version: 8,
-        glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
-        sources: {
-          carto: { type: "raster", tileSize: 256, maxzoom: 19, attribution: "© CARTO © OpenStreetMap contributors",
-                   tiles: ["a", "b", "c"].map((s) => `https://${s}.basemaps.cartocdn.com/${carto}/{z}/{x}/{y}@2x.png`) },
-          sat: { type: "raster", tileSize: 256, maxzoom: 20, attribution: "DOP20 © GeoSN, dl-de/by-2-0",
-                 tiles: ["https://geodienste.sachsen.de/wms_geosn_dop-rgb/guest?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=sn_dop_020&STYLES=&CRS=EPSG:3857&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256&FORMAT=image/jpeg"] }
-        },
-        layers: [
-          { id: "bg", type: "background", paint: { "background-color": dark ? "#161513" : "#efebe4" } },
-          { id: "carto", type: "raster", source: "carto", paint: { "raster-opacity": dark ? 0.9 : 1, "raster-saturation": -0.4 } },
-          { id: "sat", type: "raster", source: "sat", paint: { "raster-opacity": 0 } }
-        ]
-      }
+      style: `https://basemaps.cartocdn.com/gl/${dark ? "dark-matter" : "positron"}-gl-style/style.json`
     });
     window._map = map;
     map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "bottom-right");
@@ -104,6 +89,10 @@
     const setup = () => {
       if (ready || !map.isStyleLoaded()) return;
       ready = true;
+      const baseSymbols = map.getStyle().layers.filter((l) => l.type === "symbol").map((l) => l.id);
+      map.addSource("sat", { type: "raster", tileSize: 256, maxzoom: 20, attribution: "DOP20 © GeoSN, dl-de/by-2-0",
+        tiles: ["https://geodienste.sachsen.de/wms_geosn_dop-rgb/guest?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=sn_dop_020&STYLES=&CRS=EPSG:3857&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256&FORMAT=image/jpeg"] });
+      map.addLayer({ id: "sat", type: "raster", source: "sat", layout: { visibility: "none" }, paint: { "raster-fade-duration": 150 } });
       if (HEAT) {
         map.addSource("heat", { type: "image", url: "data/heat.png", coordinates: HEAT.corners });
         map.addLayer({ id: "heat", type: "raster", source: "heat", paint: { "raster-opacity": 0, "raster-resampling": "linear", "raster-fade-duration": 0 } });
@@ -145,6 +134,7 @@
           paint: { "fill-extrusion-color": dark ? "#4a4741" : "#ddd6ca", "fill-extrusion-height": ["get", "h"],
                    "fill-extrusion-base": 0, "fill-extrusion-opacity": 0.78 } }, "crowns");
       }
+      baseSymbols.forEach((id) => map.moveLayer(id));      // street names stay readable above the lines
       bindMap();
       render();
       $("#loading").classList.add("done");
@@ -165,8 +155,7 @@
     const showNone = state.notree && !state.onlyGaps && !state.cell && (state.mode === "canopy" || state.mode === "trees");
     map.setLayoutProperty("seg-none", "visibility", showNone ? "visible" : "none");
     map.setLayoutProperty("seg-gap", "visibility", state.gaps ? "visible" : "none");
-    map.setPaintProperty("sat", "raster-opacity", state.base === "sat" ? 1 : 0);
-    map.setPaintProperty("carto", "raster-opacity", state.base === "sat" ? 0 : 1);
+    map.setLayoutProperty("sat", "visibility", state.base === "sat" ? "visible" : "none");
     if (map.getLayer("heat")) map.setPaintProperty("heat", "raster-opacity", state.heat ? (state.base === "sat" ? 0.55 : 0.72) : 0);
     const v = state.view;
     map.setLayoutProperty("trees", "visibility", v === "trees" ? "visible" : "none");
