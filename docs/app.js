@@ -156,7 +156,12 @@
     map.setLayoutProperty("seg-none", "visibility", showNone ? "visible" : "none");
     map.setLayoutProperty("seg-gap", "visibility", state.gaps ? "visible" : "none");
     map.setLayoutProperty("sat", "visibility", state.base === "sat" ? "visible" : "none");
-    if (map.getLayer("heat")) map.setPaintProperty("heat", "raster-opacity", state.heat ? (state.base === "sat" ? 0.55 : 0.72) : 0);
+    if (map.getLayer("heat")) map.setPaintProperty("heat", "raster-opacity", state.heat ? (state.base === "sat" ? 0.55 : 0.68) : 0);
+    // over a coloured background (heat layer or aerial photo) every line gets a dark outline so it stays readable
+    const outlined = state.heat || state.base === "sat";
+    map.setPaintProperty("seg-case", "line-color", outlined ? "#1d1b18" : (matchMedia("(prefers-color-scheme: dark)").matches ? "#111" : "#fff"));
+    map.setPaintProperty("seg-case", "line-opacity", outlined ? ["case", ["boolean", ["feature-state", "hover"], false], 1, 0.85] : ["case", ["boolean", ["feature-state", "hover"], false], 1, 0]);
+    map.setFilter("seg-case", segFilter());
     const v = state.view;
     map.setLayoutProperty("trees", "visibility", v === "trees" ? "visible" : "none");
     map.setLayoutProperty("crowns", "visibility", v === "3d" ? "visible" : "none");
