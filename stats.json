@@ -1,0 +1,183 @@
+{
+ "trees": {
+  "total": 187690,
+  "near_streets": 86765,
+  "miss_crown": 9239,
+  "miss_h": 12090,
+  "miss_year": 59302,
+  "any_gap": 62481,
+  "crown_median": 6.0
+ },
+ "streets": {
+  "pieces": 24332,
+  "km": 1788.4,
+  "names": 3213,
+  "corridor_m": 15.0,
+  "max_len_m": 100.0,
+  "canopy_city": 6.3,
+  "canopy_city_measured": 6.2,
+  "by_class_km": [
+   1214.4,
+   303.7,
+   182.4,
+   87.9
+  ],
+  "by_class_share": [
+   67.9,
+   17.0,
+   10.2,
+   4.9
+  ],
+  "cat_share": {
+   "no trees": 48.0,
+   "few trees, little canopy": 20.1,
+   "trees, little canopy": 16.7,
+   "effective canopy": 15.1
+  },
+  "cat_km": {
+   "no trees": 858.9,
+   "few trees, little canopy": 360.1,
+   "trees, little canopy": 299.0,
+   "effective canopy": 270.3
+  },
+  "data_gap_km": 21.7,
+  "data_gap_share": 1.2,
+  "data_gap_any_km": 175.0,
+  "canopy_breaks": [
+   5,
+   15,
+   30
+  ],
+  "canopy_names": [
+   "very low",
+   "low",
+   "moderate",
+   "good"
+  ]
+ },
+ "heat": {
+  "median": 35.88,
+  "terciles": [
+   35.05,
+   36.71
+  ],
+  "p05": 31.86,
+  "p95": 39.32
+ },
+ "priority_km": [
+  204.2,
+  514.0,
+  485.5,
+  584.7
+ ],
+ "story": [
+  {
+   "a": "Shakespearestraße",
+   "b": "Pfaffendorfer Straße"
+  },
+  {
+   "a": "Schulze-Boysen-Straße",
+   "b": "Obere Eichstädtstraße"
+  },
+  {
+   "a": "Großer Marktweg",
+   "b": "Hellerstraße"
+  },
+  {
+   "a": "Paul-Beiersdorf-Straße",
+   "b": "Brentanostraße"
+  }
+ ],
+ "matrix": [
+  [
+   418.3,
+   390.4,
+   405.4
+  ],
+  [
+   100.0,
+   95.1,
+   108.6
+  ],
+  [
+   67.4,
+   64.3,
+   50.7
+  ],
+  [
+   43.9,
+   28.2,
+   15.8
+  ]
+ ],
+ "rank_low_canopy_hot": [
+  "Georg-Fischer-Straße",
+  "Wittestraße",
+  "Handelsstraße",
+  "Großer Marktweg",
+  "Bösdorfer Ring",
+  "Bitterfelder Straße",
+  "Böttcherweg",
+  "Hohmannstraße",
+  "Naumburger Straße",
+  "Sachsenseite"
+ ],
+ "rank_trees_not_enough": [
+  "Hohe Heide",
+  "Shakespearestraße",
+  "Mühlhäuser Ring",
+  "Kasseler Straße",
+  "Cöthner Straße",
+  "Zerbster Straße",
+  "Großer Marktweg",
+  "Paul-Beiersdorf-Straße",
+  "Brandenburger Straße",
+  "Natonekstraße"
+ ],
+ "rank_best": [
+  "Ferdinand-Rhode-Straße",
+  "Grassistraße",
+  "Naunhofer Straße",
+  "Klingerweg",
+  "Breitkopfstraße",
+  "Holbeinstraße",
+  "Balzacstraße",
+  "Gletschersteinstraße",
+  "Marschnerstraße",
+  "Beethovenstraße"
+ ],
+ "species": {
+  "groups": [
+   "Acer",
+   "Tilia",
+   "Fraxinus",
+   "Quercus",
+   "Prunus",
+   "Carpinus",
+   "Platanus",
+   "Robinia",
+   "Aesculus",
+   "Populus",
+   "conifers",
+   "other"
+  ],
+  "counts": [
+   37236,
+   36025,
+   16204,
+   15223,
+   8795,
+   6826,
+   6614,
+   6407,
+   5253,
+   3488,
+   9609,
+   36010
+  ]
+ },
+ "buildings": {
+  "n": 227749,
+  "h_median": 5.8
+ }
+}
