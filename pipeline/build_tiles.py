@@ -37,26 +37,52 @@ def main():
     tippecanoe(Path(a.trees), out / "trees.pmtiles", "t", 11, 16,
                ["--drop-densest-as-needed", "--extend-zooms-if-still-dropping", "-r1"])
 
-    # ---------------------------------------------------------------- crowns (3D)
-    to_m = Transformer.from_crs(4326, 25833, always_xy=True)
-    to_g = Transformer.from_crs(25833, 4326, always_xy=True)
+    # ---------------------------------------------------------------- 3D trees: trunk + stacked crown tiers
+    # Each tree becomes a few floating extrusions: a thin trunk and 3–4 discs whose radius follows a crown shape
+    #   0 round (most broadleaf trees) · 1 conical (conifers) · 2 columnar (fastigiate / "Säulen-" cultivars)
+    TIERS = {0: [(0.00, 0.30, 0.80), (0.30, 0.75, 1.00), (0.75, 1.00, 0.60)],
+             1: [(0.00, 0.30, 1.00), (0.30, 0.55, 0.72), (0.55, 0.80, 0.45), (0.80, 1.00, 0.20)],
+             2: [(0.00, 0.20, 0.75), (0.20, 0.85, 1.00), (0.85, 1.00, 0.55)]}
+    ang12 = np.linspace(0, 2 * np.pi, 13)
+    ang8 = np.linspace(0, 2 * np.pi, 9)
+
+    def ring(lon, lat, r, ang):
+        dx = r * np.cos(ang) / (111320 * np.cos(np.radians(lat)))
+        dy = r * np.sin(ang) / 110540
+        return [[round(lon + a, 7), round(lat + b, 7)] for a, b in zip(dx, dy)]
+
     with tempfile.TemporaryDirectory() as td:
         seq = Path(td) / "c.geojsonl"
+        n = 0
         with open(a.trees, encoding="utf-8") as fi, open(seq, "w", encoding="utf-8") as fo:
             for line in fi:
                 f = json.loads(line)
                 p = f["properties"]
-                x, y = to_m.transform(*f["geometry"]["coordinates"])
-                d = p["ce"]
+                lon, lat = f["geometry"]["coordinates"]
+                d = p["ce"]; R = d / 2; sh = p.get("sh", 0); g = p.get("g", 11)
                 h = p.get("h") or max(3.0, min(30.0, 1.6 * d))           # height missing → rough estimate from crown
-                base = round(max(1.5, min(h - 1.0, h - 0.9 * d)), 1)      # crown starts roughly one crown depth below the top
-                ring = shapely.buffer(shapely.Point(x, y), d / 2, quad_segs=4).exterior.coords
-                coords = [[round(c, 6) for c in to_g.transform(cx, cy)] for cx, cy in ring]
-                q = {"h": round(h, 1), "b": base, "im": p["im"], "gp": p["gp"]}
-                if "y" in p: q["y"] = p["y"]
-                fo.write(json.dumps({"type": "Feature", "properties": q,
-                                     "geometry": {"type": "Polygon", "coordinates": [coords]}}, separators=(",", ":")) + "\n")
-        tippecanoe(seq, out / "crowns.pmtiles", "c", 14, 16, ["--no-tiny-polygon-reduction", "--drop-densest-as-needed"])
+                if sh == 1:
+                    base = max(1.0, 0.15 * h)
+                elif sh == 2:
+                    base = max(1.5, 0.2 * h)
+                else:
+                    base = max(1.5, min(h - 1.0, h - 0.9 * d))         # crown starts about one crown depth below the top
+                c = max(0.5, h - base)
+                common = {"g": g, "im": p["im"]}
+                if "de" in p: common["de"] = p["de"]
+                tr = max(0.15, min(0.5, 0.04 * d))
+                fo.write(json.dumps({"type": "Feature", "properties": {**common, "k": 0, "b": 0, "h": round(base + 0.2 * c, 1)},
+                                     "geometry": {"type": "Polygon", "coordinates": [ring(lon, lat, tr, ang8)]}},
+                                    ensure_ascii=False, separators=(",", ":")) + "\n")
+                for lo, hi, rf in TIERS[sh]:
+                    fo.write(json.dumps({"type": "Feature",
+                                         "properties": {**common, "k": 1, "b": round(base + lo * c, 1), "h": round(base + hi * c, 1)},
+                                         "geometry": {"type": "Polygon", "coordinates": [ring(lon, lat, R * rf, ang12)]}},
+                                        ensure_ascii=False, separators=(",", ":")) + "\n")
+                n += 1
+        print(f"3D trees: {n:,} trees → {seq.stat().st_size/1e6:.0f} MB of pieces", flush=True)
+        tippecanoe(seq, out / "crowns.pmtiles", "c", 15, 16, ["--no-tiny-polygon-reduction", "--no-feature-limit",
+                                                              "--no-tile-size-limit", "--no-simplification-of-shared-nodes"])
 
     # ---------------------------------------------------------------- buildings (3D)
     if Path(a.buildings).exists():

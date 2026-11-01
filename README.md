@@ -17,7 +17,7 @@ Leipzig's tree register lists about 188,000 trees. A count does not tell you how
 | **Count is not cover** | automatically selected street pairs: many young, small-crowned trees vs. fewer large crowns |
 | **Heat** | Landsat 8/9 summer land-surface temperature as a map layer and per street; canopy × heat matrix and priority classes |
 | **Data gaps** | trees without crown size, height or planting year are kept and counted; streets where ≥ 25 % of trees lack a crown size are marked (dashed purple) |
-| **3D** | tree crowns as floating cylinders (height and crown diameter from the register) plus LoD2 buildings |
+| **Trees & 3D** | every tree coloured by species (10 main genera, conifers, other; click to filter). In 3D each tree has a trunk and a stacked crown with its registered height and crown diameter, shaped round, conical (conifers) or columnar ("Säulen-/Fastigiata" cultivars), next to LoD2 buildings |
 
 ## Key findings
 

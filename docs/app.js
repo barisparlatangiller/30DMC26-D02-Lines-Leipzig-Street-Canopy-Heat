@@ -19,6 +19,12 @@
     0: "Canopy ≥ 15 % and not in the hottest third"
   };
   const TREES_STOPS = [[0, "#efeadf"], [3, "#cfe3b8"], [8, "#83c07c"], [15, "#2f8b57"], [25, "#0d4d2e"]];
+  // species groups (same order as pipeline/build_streets.py GENERA + conifers + other)
+  const SPC = ["#e07b39", "#d2b737", "#86b04f", "#2e6b3f", "#d8789b", "#4d8fc9", "#3f9384", "#a98bd1", "#b5523b", "#93aaa3", "#1f4a3a", "#a7a28c"];
+  const SPN = [["Maple", "Ahorn"], ["Lime / linden", "Linde"], ["Ash", "Esche"], ["Oak", "Eiche"], ["Cherry & plum", "Kirsche"],
+               ["Hornbeam", "Hainbuche"], ["Plane", "Platane"], ["Black locust", "Robinie"], ["Horse chestnut", "Rosskastanie"],
+               ["Poplar", "Pappel"], ["Conifers", "Nadelbäume"], ["Other species", "andere"]];
+  const spColor = () => ["match", ["get", "g"], ...SPC.slice(0, 11).flatMap((c, i) => [i, c]), SPC[11]];
   const HEAT_NAMES = ["cooler third", "middle third", "hottest third"];
   const BIV = [ // rows = canopy class, cols = heat third
     ["#e8a37f", "#d8643f", "#a3151f"],
@@ -27,7 +33,7 @@
     ["#86b98b", "#5a9a68", "#3e7a47"]];
 
   const state = { mode: "canopy", view: "lines", base: "map", heat: false, gaps: true, notree: true, opac: 0.95,
-                  cell: null, onlyGaps: false, street: null, rank: "rank_trees_not_enough" };
+                  cell: null, onlyGaps: false, street: null, rank: "rank_trees_not_enough", genus: null };
   let map, SEG, STREETS, STATS, HEAT = null, hoverId = null, popup;
   const byStreet = new Map();
 
@@ -119,14 +125,14 @@
         paint: {
           "circle-radius": ["interpolate", ["exponential", 2], ["zoom"],
             11, ["max", 1, ["/", ["/", ["get", "ce"], 2], mpp(11)]], 19, ["/", ["/", ["get", "ce"], 2], mpp(19)]],
-          "circle-color": ["case", ["==", ["get", "im"], 1], "#b9a46a",
-            ["step", ["coalesce", ["get", "cr"], 0], "#9ccc72", 5, "#5aa55a", 10, "#257243"]],
-          "circle-opacity": 0.55, "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 13, 0, 16, 0.8],
+          "circle-color": spColor(),
+          "circle-opacity": ["case", ["==", ["get", "im"], 1], 0.35, 0.7], "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 13, 0, 16, 0.8],
           "circle-stroke-color": ["case", ["==", ["get", "gp"], 1], GAP, "rgba(20,60,30,0.6)"] } });
-      map.addLayer({ id: "crowns", type: "fill-extrusion", source: "crowns", "source-layer": "c", minzoom: 14,
+      map.addLayer({ id: "crowns", type: "fill-extrusion", source: "crowns", "source-layer": "c", minzoom: 15,
         layout: { visibility: "none" },
-        paint: { "fill-extrusion-color": ["case", ["==", ["get", "im"], 1], "#b5a865", "#3f8a4f"],
-                 "fill-extrusion-height": ["get", "h"], "fill-extrusion-base": ["get", "b"], "fill-extrusion-opacity": 0.82 } });
+        paint: { "fill-extrusion-color": ["case", ["==", ["get", "k"], 0], "#6e5643", spColor()],
+                 "fill-extrusion-height": ["get", "h"], "fill-extrusion-base": ["get", "b"], "fill-extrusion-opacity": 0.93,
+                 "fill-extrusion-vertical-gradient": true } });
       if (STATS.buildings) {
         map.addSource("bld", { type: "vector", url: "pmtiles://" + new URL("data/buildings.pmtiles", location.href).href });
         map.addLayer({ id: "bld", type: "fill-extrusion", source: "bld", "source-layer": "b", minzoom: 13,
@@ -162,6 +168,9 @@
     map.setPaintProperty("seg-case", "line-color", outlined ? "#1d1b18" : (matchMedia("(prefers-color-scheme: dark)").matches ? "#111" : "#fff"));
     map.setPaintProperty("seg-case", "line-opacity", outlined ? ["case", ["boolean", ["feature-state", "hover"], false], 1, 0.85] : ["case", ["boolean", ["feature-state", "hover"], false], 1, 0]);
     map.setFilter("seg-case", segFilter());
+    const gf = state.genus === null ? null : ["==", ["get", "g"], state.genus];
+    map.setFilter("trees", gf);
+    map.setFilter("crowns", gf);
     const v = state.view;
     map.setLayoutProperty("trees", "visibility", v === "trees" ? "visible" : "none");
     map.setLayoutProperty("crowns", "visibility", v === "3d" ? "visible" : "none");
@@ -204,10 +213,17 @@
     map.on("mousemove", "trees", (e) => {
       if (hoverId !== null) return;
       const p = e.features[0].properties;
-      tip.innerHTML = `<b>${esc(p.de || p.sc || "Tree")}</b> <small>${esc(p.sc || "")}</small>` +
+      tip.innerHTML = `<b>${esc(p.de || p.sc || "Tree")}</b> <small><i class="dot" style="background:${SPC[p.g ?? 11]}"></i>${esc(p.sc || "")} · ${SPN[p.g ?? 11][0]}</small>` +
         `<small>crown ${p.cr != null ? fmt(p.cr, 0) + " m" : "<i>missing</i> (est. " + fmt(p.ce, 0) + " m)"} · height ${p.h != null ? fmt(p.h, 0) + " m" : "<i>missing</i>"} · planted ${p.y || "<i>unknown</i>"}</small>`;
       place(tip, e.point); map.getCanvas().style.cursor = "pointer";
     });
+    map.on("mousemove", "crowns", (e) => {
+      if (hoverId !== null) return;
+      const p = e.features[0].properties;
+      tip.innerHTML = `<b>${esc(p.de || SPN[p.g][0])}</b><small><i class="dot" style="background:${SPC[p.g]}"></i>${SPN[p.g][0]} · ${SPN[p.g][1]} · top at ${fmt(p.h, 0)} m${p.im ? " · crown size estimated" : ""}</small>`;
+      place(tip, e.point); map.getCanvas().style.cursor = "pointer";
+    });
+    map.on("mouseleave", "crowns", () => { if (hoverId === null) { tip.hidden = true; map.getCanvas().style.cursor = ""; } });
     map.on("mouseleave", "trees", () => { if (hoverId === null) { tip.hidden = true; map.getCanvas().style.cursor = ""; } });
     map.on("click", (e) => {
       const fs = map.queryRenderedFeatures([[e.point.x - 4, e.point.y - 4], [e.point.x + 4, e.point.y + 4]], { layers: ["seg", "seg-none", "seg-gap"].filter((l) => map.getLayoutProperty(l, "visibility") !== "none") });
@@ -470,10 +486,16 @@
       h += `<div class="lg-row"><i class="sq ln thin" style="background:${NOTREE}"></i>no registered tree within 15 m <small>${fmt(STATS.streets.cat_km["no trees"])} km</small></div>`;
     if (state.gaps) h += `<div class="lg-row"><i class="sq ln dash"></i>data gap — canopy partly estimated <small>${fmt(STATS.streets.data_gap_km, 1)} km</small></div>`;
     if (state.heat && state.mode !== "heat") h += `<div class="lg-sel">${heatLegend("Heat layer (background)", true)}</div>`;
-    if (state.view === "3d") h += `<div class="lg-note hint">3D: green = tree crowns from the register (olive = crown size estimated), grey = LoD2 buildings. Zoom in to street level.</div>`;
-    if (state.view === "trees") h += `<div class="lg-note hint">Trees drawn at their crown size. <span style="color:#b9a46a;font-weight:600">Olive</span> = crown missing, estimated; purple ring = incomplete record.</div>`;
+    if (state.view === "3d" || state.view === "trees") {
+      const cnt = (STATS.species || {}).counts || [];
+      h += `<div class="lg-sel"><div class="lg-title" style="font-size:12px">Trees by species <small class="hint">click to show one</small></div><div class="spgrid">` +
+        SPN.map(([en, de], i) => `<button class="sp${state.genus === i ? " on" : ""}${state.genus !== null && state.genus !== i ? " dim" : ""}" data-g="${i}"><i style="background:${SPC[i]}"></i>${en}<small>${cnt[i] ? fmt(cnt[i]) : ""}</small></button>`).join("") + `</div>` +
+        (state.view === "3d" ? `<div class="hint">Trees drawn from the register: real height and crown diameter; crown shape round, conical (conifers) or columnar (“Säulen-/Fastigiata” cultivars). Grey blocks = LoD2 buildings. Zoom in to street level.</div>`
+                             : `<div class="hint">Circles at real crown size. Faded = crown size missing, estimated; purple ring = incomplete record.</div>`) + `</div>`;
+    }
     L.innerHTML = h;
     const c = $("#lgClear"); if (c) c.onclick = () => { state.cell = null; render(); };
+    L.querySelectorAll(".sp").forEach((b) => b.onclick = () => { const g = +b.dataset.g; state.genus = state.genus === g ? null : g; render(); });
   }
   function heatLegend(title, small) {
     if (!HEAT) return "";

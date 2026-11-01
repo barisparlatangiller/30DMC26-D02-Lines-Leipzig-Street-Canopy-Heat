@@ -272,3 +272,10 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
   .lg-title { font-size: 12.5px; }
   .rank.st li { grid-template-columns: 18px 1fr 40px 84px; }
 }
+.spgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 8px; margin: 6px 0 6px; }
+.sp { display: flex; align-items: center; gap: 6px; border: 0; background: none; padding: 3px 4px; border-radius: 6px; font-size: 12px; cursor: pointer; text-align: left; }
+.sp:hover, .sp.on { background: var(--chip); }
+.sp.dim { opacity: .4; }
+.sp i { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.sp small { margin-left: auto; color: var(--ink-3); font-size: 10.5px; font-family: "DM Mono", monospace; }
+.lg-sel .sp { color: var(--ink); text-decoration: none; padding: 3px 4px; font-size: 12px; }

@@ -39,6 +39,19 @@ GAP_CROWN_SHARE = 0.25   # ≥25 % of the trees without a usable crown diameter 
 BEZIRK = {"M": "Mitte", "NO": "Nordost", "O": "Ost", "SO": "Südost", "S": "Süd", "SW": "Südwest",
           "W": "West", "AW": "Alt-West", "NW": "Nordwest", "N": "Nord"}
 
+# species groups for the tree layers (≈ 80 % of all trees fall into the first ten genera)
+GENERA = ["Acer", "Tilia", "Fraxinus", "Quercus", "Prunus", "Carpinus", "Platanus", "Robinia", "Aesculus", "Populus"]
+CONIFERS = {"Pinus", "Picea", "Abies", "Larix", "Taxus", "Thuja", "Chamaecyparis", "Pseudotsuga", "Metasequoia",
+            "Taxodium", "Juniperus", "Tsuga", "Sequoiadendron", "Cupressocyparis", "Cedrus", "Sequoia"}
+COLUMNAR = r"fastigiat|columnar|pyramidal|italica|erect|monument|streetwise|lanzam|s[äa]ulen|pyramiden"
+
+
+def species_group(genus):
+    if genus in GENERA:
+        return GENERA.index(genus)
+    return 10 if genus in CONIFERS else 11
+
+
 # canopy classes (estimated canopy cover of the 30 m street corridor)
 CANOPY_BREAKS = [5, 15, 30]       # %  → 0: <5, 1: 5–15, 2: 15–30, 3: ≥30
 CANOPY_NAMES = ["very low", "low", "moderate", "good"]
@@ -425,10 +438,15 @@ def main():
 
     # ---------------------------------------------------------------- trees for the vector tiles
     t4 = t.to_crs(4326)
+    grp = t4.genus.map(species_group).values
+    shape = np.where(grp == 10, 1, np.where((t4.name_sci + " " + t4.name_de).str.contains(COLUMNAR, case=False, regex=True), 2, 0))
+    stats["species"] = {"groups": GENERA + ["conifers", "other"],
+                        "counts": [int((grp == k).sum()) for k in range(12)]}
+    json.dump(stats, open(out / "stats.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     near = np.zeros(len(t), dtype=bool); near[pairs.t.unique()] = True
     with open(Path(a.work) / "trees.geojsonl", "w", encoding="utf-8") as fh:
         for i, r in enumerate(t4.itertuples()):
-            p = {"ce": round(float(r.crown_est), 1), "im": int(r.imputed), "st": int(near[i])}
+            p = {"ce": round(float(r.crown_est), 1), "im": int(r.imputed), "st": int(near[i]), "g": int(grp[i]), "sh": int(shape[i])}
             if r.crown_ok: p["cr"] = round(float(r.crown), 1)
             if r.h_ok: p["h"] = round(float(r.h), 1)
             if r.year_ok: p["y"] = int(r.year)
