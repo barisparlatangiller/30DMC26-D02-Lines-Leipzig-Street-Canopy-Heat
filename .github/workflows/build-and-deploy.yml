@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -112,6 +112,19 @@ jobs:
             docs/data/stats.json
             docs/data/heat.json
           if-no-files-found: ignore
+
+      # ---------------------------------------------------------------- results snapshot (branch "data")
+      - name: Publish result files to the 'data' branch (for QGIS users)
+        continue-on-error: true
+        run: |
+          mkdir -p /tmp/snap && cd /tmp/snap
+          for f in street_segments.gpkg.zip street_segments.csv.zip lst_summer_leipzig.tif stats.json streets.json heat.json heat.png; do
+            [ -f "$GITHUB_WORKSPACE/docs/data/$f" ] && cp "$GITHUB_WORKSPACE/docs/data/$f" .
+          done
+          printf '# Result files\n\nBuilt by the GitHub Action from commit %s on %s.\nSee the main branch README for method and licences.\n' "$GITHUB_SHA" "$(date -u +%F)" > README.md
+          git init -q -b data && git add -A
+          git -c user.name="github-actions" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -qm "Results of $GITHUB_SHA"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" data:data
 
       # ---------------------------------------------------------------- publish
       - uses: actions/configure-pages@v5
